@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trading Scanner — TTrades + AM Trades</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#f8f9fb; --surface:#fff; --surface2:#f1f4f8; --surface3:#e8edf4;
+    --border:#e2e8f0; --border2:#cbd5e1;
+    --text0:#0f172a; --text1:#334155; --text2:#64748b; --text3:#94a3b8;
+    --green:#059669; --green-bg:#ecfdf5; --green-bd:#6ee7b7;
+    --amber:#d97706; --amber-bg:#fffbeb; --amber-bd:#fcd34d;
+    --red:#dc2626; --red-bg:#fef2f2; --red-bd:#fca5a5;
+    --blue:#2563eb; --blue-bg:#eff6ff; --blue-bd:#bfdbfe;
+    --purple:#7c3aed; --purple-bg:#f5f3ff; --purple-bd:#ddd6fe;
+    --teal:#0d9488; --teal-bg:#f0fdfa; --teal-bd:#99f6e4;
+    --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+    --shadow-md:0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.05);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text0);min-height:100vh;-webkit-font-smoothing:antialiased;}
+
+  /* ── TOP BAR ── */
+  .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;box-shadow:var(--shadow);}
+  .logo{font-size:14px;font-weight:700;display:flex;align-items:center;gap:7px;}
+  .logo-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 2s infinite;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+  .topbar-right{display:flex;align-items:center;gap:12px;}
+  .et-badge{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;font-family:'DM Mono',monospace;color:var(--text2);}
+  .session-badge{font-size:11px;font-weight:600;padding:4px 11px;border-radius:20px;border:1px solid;font-family:'DM Mono',monospace;}
+  .sess-asia{background:var(--purple-bg);color:var(--purple);border-color:var(--purple-bd);}
+  .sess-london{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bd);}
+  .sess-ny{background:var(--green-bg);color:var(--green);border-color:var(--green-bd);}
+  .sess-closed{background:var(--surface2);color:var(--text2);border-color:var(--border);}
+  .watchlist-count{font-size:11px;font-family:'DM Mono',monospace;color:var(--text2);background:var(--surface2);border:1px solid var(--border);padding:4px 10px;border-radius:6px;}
+
+  /* ── TABS ── */
+  .tab-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;gap:0;position:sticky;top:52px;z-index:100;}
+  .tab{padding:12px 20px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;user-select:none;display:flex;align-items:center;gap:7px;}
+  .tab:hover{color:var(--text0);}
+  .tab.active{color:var(--text0);font-weight:600;border-bottom-color:var(--text0);}
+  .tab-badge{font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;font-family:'DM Mono',monospace;}
+  .tab1-badge{background:var(--blue-bg);color:var(--blue);}
+  .tab2-badge{background:var(--green-bg);color:var(--green);}
+
+  /* ── PANELS ── */
+  .panel{display:none;min-height:calc(100vh - 96px);}
+  .panel.active{display:block;}
+
+  /* ══════════════════════════════════════════
+     TAB 1 — TTRADES SWING SCANNER
+  ══════════════════════════════════════════ */
+  .t1-layout{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 96px);}
+  .t1-sidebar{background:var(--surface);border-right:1px solid var(--border);padding:1.25rem;display:flex;flex-direction:column;gap:1.25rem;overflow-y:auto;}
+  .t1-content{padding:1.25rem 1.5rem;overflow-x:hidden;}
+
+  .sec-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px;}
+  .btn-primary{background:var(--text0);color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;width:100%;margin-bottom:5px;transition:all .15s;}
+  .btn-primary:hover{background:var(--text1);}
+  .btn-primary:disabled{background:var(--border2);color:var(--text3);cursor:not-allowed;}
+  .btn-secondary{background:var(--surface2);color:var(--text2);border:1px solid var(--border);padding:8px 14px;border-radius:7px;font-size:11px;font-weight:500;font-family:'Inter',sans-serif;cursor:pointer;width:100%;transition:all .15s;}
+  .btn-secondary:hover{background:var(--border);}
+  .btn-secondary:disabled{opacity:.4;cursor:not-allowed;}
+  .filter-sel{background:var(--surface);border:1px solid var(--border);border-radius:7px;color:var(--text1);padding:7px 10px;font-size:12px;font-family:'Inter',sans-serif;cursor:pointer;width:100%;margin-bottom:5px;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;padding-right:26px;}
+  .metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+  .metric-cell{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px;}
+  .metric-lbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;font-family:'DM Mono',monospace;margin-bottom:2px;}
+  .metric-val{font-size:17px;font-weight:700;color:var(--text0);font-family:'DM Mono',monospace;}
+  .progress-wrap{display:none;}
+  .progress-lbl{font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .progress-track{background:var(--surface2);border-radius:3px;height:4px;overflow:hidden;}
+  .progress-fill{height:100%;background:var(--text0);border-radius:3px;transition:width .3s;}
+  .debug-btn{font-size:10px;color:var(--blue);background:none;border:none;cursor:pointer;font-family:'DM Mono',monospace;text-decoration:underline;padding:0;}
+  .debug-log{display:none;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:7px;font-size:10px;color:var(--text2);font-family:'DM Mono',monospace;max-height:180px;overflow-y:auto;line-height:1.8;margin-top:5px;}
+
+  /* Swing scanner cards */
+  .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:10px;}
+  .sw-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;box-shadow:var(--shadow);animation:fadeUp .3s ease;transition:box-shadow .2s,transform .2s;}
+  .sw-card:hover{box-shadow:var(--shadow-md);transform:translateY(-1px);}
+  .sw-card.grade-a{border-left:3px solid var(--green);}
+  .sw-card.grade-b{border-left:3px solid var(--amber);}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:9px;}
+  .card-ticker{font-size:19px;font-weight:700;letter-spacing:-.02em;}
+  .card-ticker a{color:inherit;text-decoration:none;}
+  .card-ticker a:hover{color:var(--blue);}
+  .card-sub{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:2px;}
+  .card-badges{display:flex;flex-direction:column;align-items:flex-end;gap:3px;}
+  .grade-pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;border:1px solid;font-family:'DM Mono',monospace;}
+  .grade-a{background:var(--green-bg);color:var(--green);border-color:var(--green-bd);}
+  .grade-b{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-bd);}
+  .grade-c{background:var(--surface2);color:var(--text2);border-color:var(--border);}
+
+  /* Chips */
+  .chips{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:9px;}
+  .chip{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;border:1px solid;font-family:'DM Mono',monospace;white-space:nowrap;}
+  .chip-green{background:var(--green-bg);color:var(--green);border-color:var(--green-bd);}
+  .chip-amber{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-bd);}
+  .chip-blue{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bd);}
+  .chip-red{background:var(--red-bg);color:var(--red);border-color:var(--red-bd);}
+  .chip-purple{background:var(--purple-bg);color:var(--purple);border-color:var(--purple-bd);}
+  .chip-teal{background:var(--teal-bg);color:var(--teal);border-color:var(--teal-bd);}
+  .chip-gray{background:var(--surface2);color:var(--text2);border-color:var(--border);}
+
+  /* Layers */
+  .layers{display:flex;flex-direction:column;gap:4px;margin-bottom:9px;}
+  .layer{display:flex;align-items:flex-start;gap:7px;padding:6px 9px;border-radius:7px;border:1px solid;}
+  .layer.pass{background:var(--green-bg);border-color:var(--green-bd);}
+  .layer.partial{background:var(--amber-bg);border-color:var(--amber-bd);}
+  .layer.pending{background:var(--surface2);border-color:var(--border);}
+  .layer-num{font-size:10px;font-weight:700;width:15px;height:15px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'DM Mono',monospace;margin-top:1px;}
+  .layer.pass .layer-num{background:var(--green);color:#fff;}
+  .layer.partial .layer-num{background:var(--amber);color:#fff;}
+  .layer.pending .layer-num{background:var(--border2);color:var(--text2);}
+  .layer-title{font-size:11px;font-weight:600;color:var(--text0);margin-bottom:1px;}
+  .layer.pending .layer-title{color:var(--text2);}
+  .layer-detail{font-size:10px;color:var(--text2);line-height:1.5;font-family:'DM Mono',monospace;}
+  .layer.pass .layer-detail{color:#065f46;}
+  .layer.partial .layer-detail{color:#92400e;}
+
+  /* Trade plan */
+  .trade-plan{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 11px;margin-bottom:9px;}
+  .trade-plan-lbl{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;}
+  .trade-cells{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:8px;}
+  .tcell{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 6px;text-align:center;}
+  .tcell-lbl{font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;font-family:'DM Mono',monospace;margin-bottom:2px;}
+  .tcell-val{font-size:13px;font-weight:700;font-family:'DM Mono',monospace;}
+  .tcell.entry .tcell-val{color:var(--blue);}
+  .tcell.stop .tcell-val{color:var(--red);}
+  .tcell.target .tcell-val{color:var(--green);}
+  .tcell.rr .tcell-val{color:var(--purple);}
+  .tcell-sub{font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:1px;}
+  .options-row{background:var(--purple-bg);border:1px solid var(--purple-bd);border-radius:6px;padding:7px 9px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .opt-item{display:flex;flex-direction:column;align-items:center;}
+  .opt-lbl{font-size:8px;color:var(--purple);opacity:.7;text-transform:uppercase;letter-spacing:.05em;}
+  .opt-val{font-size:12px;font-weight:700;color:var(--purple);font-family:'DM Mono',monospace;}
+  .opt-sep{width:1px;height:22px;background:var(--purple-bd);}
+
+  /* Add to watchlist btn */
+  .add-wl-btn{width:100%;background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd);padding:7px;border-radius:7px;font-size:12px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;transition:all .15s;margin-bottom:8px;}
+  .add-wl-btn:hover{background:var(--blue);color:#fff;}
+  .add-wl-btn.added{background:var(--green-bg);color:var(--green);border-color:var(--green-bd);cursor:default;}
+
+  /* Commentary */
+  .card-commentary{font-size:11px;color:var(--text2);line-height:1.7;font-style:italic;border-top:1px solid var(--border);padding-top:8px;}
+  .card-commentary.loaded{font-style:normal;color:var(--text1);}
+
+  /* ══════════════════════════════════════════
+     TAB 2 — AM TRADES INTRADAY
+  ══════════════════════════════════════════ */
+  .t2-layout{display:grid;grid-template-columns:320px 1fr;min-height:calc(100vh - 96px);}
+  .t2-sidebar{background:var(--surface);border-right:1px solid var(--border);padding:1.25rem;display:flex;flex-direction:column;gap:1rem;overflow-y:auto;}
+  .t2-content{padding:1.25rem 1.5rem;overflow-x:hidden;}
+
+  /* Index macro cards */
+  .idx-card{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:11px 13px;margin-bottom:8px;}
+  .idx-card.bull{border-left:3px solid var(--green);background:var(--green-bg);}
+  .idx-card.bear{border-left:3px solid var(--red);background:var(--red-bg);}
+  .idx-card.skip{border-left:3px solid var(--amber);background:var(--amber-bg);}
+  .idx-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .idx-name{font-size:15px;font-weight:700;}
+  .idx-price{font-size:11px;color:var(--text2);font-family:'DM Mono',monospace;margin-top:1px;}
+  .profile-box{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px;}
+  .profile-name{font-size:12px;font-weight:600;color:var(--text0);margin-bottom:2px;}
+  .profile-desc{font-size:10px;color:var(--text2);line-height:1.5;font-family:'DM Mono',monospace;}
+  .status-pill{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;border:1px solid;margin-top:4px;}
+  .status-confirmed{background:var(--green-bg);color:var(--green);border-color:var(--green-bd);}
+  .status-developing{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-bd);}
+  .status-wait{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bd);}
+  .status-skip{background:var(--red-bg);color:var(--red);border-color:var(--red-bd);}
+
+  /* Watchlist in Tab 2 */
+  .wl-item{display:flex;align-items:center;justify-content:space-between;padding:7px 9px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);margin-bottom:4px;cursor:pointer;transition:all .12s;}
+  .wl-item:hover{background:var(--border);}
+  .wl-item.selected{background:var(--blue-bg);border-color:var(--blue-bd);}
+  .wl-ticker{font-size:13px;font-weight:700;}
+  .wl-bias{font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;font-family:'DM Mono',monospace;}
+  .wl-status{font-size:10px;font-family:'DM Mono',monospace;}
+  .wl-remove{font-size:11px;color:var(--text3);cursor:pointer;padding:2px 5px;border-radius:3px;}
+  .wl-remove:hover{color:var(--red);background:var(--red-bg);}
+
+  /* Session timeline */
+  .session-bar-wrap{margin-bottom:.75rem;}
+  .session-track{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-bottom:4px;}
+  .seg-a{background:var(--purple-bd);flex:7;}
+  .seg-l{background:var(--blue-bd);flex:7;}
+  .seg-n{background:var(--green-bd);flex:10;}
+  .seg-a.live{background:var(--purple);}
+  .seg-l.live{background:var(--blue);}
+  .seg-n.live{background:var(--green);}
+  .session-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;}
+
+  /* Intraday stock cards */
+  .intra-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;box-shadow:var(--shadow);animation:fadeUp .3s ease;margin-bottom:10px;}
+  .intra-card.confirmed{border-left:3px solid var(--green);}
+  .intra-card.developing{border-left:3px solid var(--amber);}
+  .intra-card.waiting{border-left:3px solid var(--blue);}
+  .intra-card.skip{border-left:3px solid var(--red);opacity:.7;}
+  .intra-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+
+  /* Action box */
+  .action-box{border-radius:8px;padding:9px 11px;margin-bottom:9px;border:1px solid;}
+  .action-confirmed{background:var(--green-bg);border-color:var(--green-bd);}
+  .action-developing{background:var(--amber-bg);border-color:var(--amber-bd);}
+  .action-waiting{background:var(--blue-bg);border-color:var(--blue-bd);}
+  .action-skip{background:var(--red-bg);border-color:var(--red-bd);}
+  .action-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;}
+  .action-confirmed .action-lbl{color:var(--green);}
+  .action-developing .action-lbl{color:var(--amber);}
+  .action-waiting .action-lbl{color:var(--blue);}
+  .action-skip .action-lbl{color:var(--red);}
+  .action-text{font-size:11px;line-height:1.6;}
+  .action-confirmed .action-text{color:#065f46;}
+  .action-developing .action-text{color:#92400e;}
+  .action-waiting .action-text{color:#1e40af;}
+  .action-skip .action-text{color:#991b1b;}
+
+  /* Session candle mini display */
+  .candle-display{display:flex;gap:6px;margin-bottom:9px;}
+  .candle-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
+  .candle-lbl-t{font-size:8px;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;}
+  .candle-body{width:100%;border-radius:2px;min-height:6px;}
+  .candle-bull{background:var(--green);}
+  .candle-bear{background:var(--red);}
+  .candle-doji{background:var(--text3);}
+  .candle-pending{background:var(--border2);border:1px dashed var(--border);}
+  .candle-stat{font-size:9px;color:var(--text2);font-family:'DM Mono',monospace;text-align:center;}
+
+  .empty{text-align:center;padding:4rem 2rem;color:var(--text3);}
+  .empty h2{font-size:16px;font-weight:600;color:var(--text2);margin-bottom:8px;}
+  .empty p{font-size:11px;line-height:1.8;font-family:'DM Mono',monospace;}
+
+  .method-strip{background:var(--teal-bg);border:1px solid var(--teal-bd);border-radius:8px;padding:8px 13px;font-size:11px;color:var(--teal);font-family:'DM Mono',monospace;line-height:1.7;margin-bottom:1rem;}
+  .divider{height:1px;background:var(--border);margin:.75rem 0;}
+
+  /* Refresh button */
+  .btn-sm{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:6px 12px;font-size:11px;cursor:pointer;color:var(--text2);font-family:'Inter',sans-serif;transition:all .12s;}
+  .btn-sm:hover{background:var(--border);}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-dot"></div>
+    Trading Scanner
+    <span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-left:4px;">TTrades + AM Trades</span>
+  </div>
+  <div class="topbar-right">
+    <div class="et-badge" id="etClock">—</div>
+    <div class="session-badge sess-closed" id="sessionBadge">—</div>
+    <div class="watchlist-count">Watchlist: <span id="wlCount">0</span></div>
+    <button class="btn-sm" onclick="refreshAll()">↻ Refresh</button>
+  </div>
+</div>
+
+<!-- TAB BAR -->
+<div class="tab-bar">
+  <div class="tab active" id="tab1" onclick="switchTab(1)">
+    <span>📊</span> TTrades Swing Scanner
+    <span class="tab-badge tab1-badge" id="t1Badge">—</span>
+  </div>
+  <div class="tab" id="tab2" onclick="switchTab(2)">
+    <span>⚡</span> AM Trades Intraday
+    <span class="tab-badge tab2-badge" id="t2Badge">—</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PANEL 1 — TTRADES SWING SCANNER
+══════════════════════════════════════════ -->
+<div class="panel active" id="panel1">
+<div class="t1-layout">
+
+  <div class="t1-sidebar">
+    <div>
+      <div class="sec-label">Scan</div>
+      <button class="btn-primary" id="t1ScanBtn" onclick="startSwingScan()">▶ Run Swing Scan</button>
+      <button class="btn-secondary" id="t1DiagBtn" onclick="startSwingScan(true)">Diagnose 25 tickers</button>
+    </div>
+
+    <div class="progress-wrap" id="t1Progress">
+      <div class="progress-lbl" id="t1ProgressLbl">Scanning...</div>
+      <div class="progress-track"><div class="progress-fill" id="t1ProgressFill" style="width:0%"></div></div>
+    </div>
+
+    <div>
+      <div class="sec-label">Results</div>
+      <div class="metric-grid">
+        <div class="metric-cell"><div class="metric-lbl">Scanned</div><div class="metric-val" id="t1Scanned">—</div></div>
+        <div class="metric-cell"><div class="metric-lbl">Matches</div><div class="metric-val" id="t1Matches">—</div></div>
+        <div class="metric-cell"><div class="metric-lbl">Grade A</div><div class="metric-val" id="t1GradeA" style="color:var(--green)">—</div></div>
+        <div class="metric-cell"><div class="metric-lbl">In WL</div><div class="metric-val" id="t1WL" style="color:var(--blue)">—</div></div>
+        <div class="metric-cell"><div class="metric-lbl">No bias</div><div class="metric-val" id="t1NoBias" style="color:var(--text3)">—</div></div>
+        <div class="metric-cell"><div class="metric-lbl">No CISD</div><div class="metric-val" id="t1NoCISD" style="color:var(--text3)">—</div></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-label">Filters</div>
+      <select class="filter-sel" id="t1Bias" onchange="renderSwingCards()">
+        <option value="all">All bias</option>
+        <option value="bullish">Bullish only</option>
+        <option value="bearish">Bearish only</option>
+      </select>
+      <select class="filter-sel" id="t1Grade" onchange="renderSwingCards()">
+        <option value="all" selected>All grades</option>
+        <option value="A">Grade A only</option>
+        <option value="AB">A + B</option>
+      </select>
+      <select class="filter-sel" id="t1POI" onchange="renderSwingCards()">
+        <option value="all">All POI types</option>
+        <option value="FVG">FVG only</option>
+        <option value="Order Block">Order Block</option>
+      </select>
+    </div>
+
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+        <div class="sec-label" style="margin-bottom:0;">Debug</div>
+        <button class="debug-btn" onclick="toggleDebug('t1Debug')">show</button>
+      </div>
+      <div class="debug-log" id="t1Debug"></div>
+    </div>
+
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 11px;">
+      <div class="sec-label">TTrades Rules</div>
+      <div style="font-size:10px;color:var(--text1);line-height:1.9;">
+        <div><strong>1.</strong> Yesterday closed above prev high = bullish</div>
+        <div><strong>1.</strong> Yesterday closed below prev low = bearish</div>
+        <div><strong>2.</strong> 1H CISD at swing point (30 bar lookback)</div>
+        <div><strong>3.</strong> POI within 10% — 60/40 range split</div>
+        <div><strong>4.</strong> 5-min CISD for entry · 2R minimum</div>
+        <div style="margin-top:5px;color:var(--text3);font-size:9px;">Best run: after 4pm ET or before 9:30am ET</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="t1-content">
+    <div class="method-strip">
+      <strong>TTrades Fractal Model:</strong> Daily one-sided bias via closure → Swing point (candle 2) identified → Hourly CISD confirms change of delivery → POI in correct half of prev day's range → Add to watchlist for AM Trades confirmation
+    </div>
+    <div id="timingWarning" style="display:none;background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:8px;padding:9px 14px;margin-bottom:1rem;font-size:12px;color:var(--amber);line-height:1.7;">
+      <strong>⏰ Timing note:</strong> Best results when run <strong>after 4pm ET</strong> (daily candles closed) or <strong>before 9:30am ET</strong> (using yesterday's confirmed close). Running during market hours means today's candle is incomplete and bias detection uses yesterday's confirmed close instead. Results are still valid — just fewer setups may appear.
+    </div>
+    <div id="t1Cards">
+      <div class="empty">
+        <h2>Build your watchlist</h2>
+        <p>Run the swing scan to find stocks with TTrades daily bias<br>and hourly CISD confirmation.<br><br>
+        Add setups to your watchlist — they automatically appear<br>in the AM Trades Intraday tab for session profile confirmation.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PANEL 2 — AM TRADES INTRADAY
+══════════════════════════════════════════ -->
+<div class="panel" id="panel2">
+<div class="t2-layout">
+
+  <div class="t2-sidebar">
+
+    <div>
+      <div class="sec-label">Session Timeline</div>
+      <div class="session-bar-wrap">
+        <div class="session-track">
+          <div class="seg-a" id="segA"></div>
+          <div class="seg-l" id="segL"></div>
+          <div class="seg-n" id="segN"></div>
+        </div>
+        <div class="session-labels">
+          <span>Asia 18:00</span><span>London 01:00</span><span>NY 08:00</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-label">Macro — Indices</div>
+      <div id="t2IndexCards">
+        <div style="text-align:center;padding:1rem;color:var(--text3);font-size:11px;">Click refresh to load</div>
+      </div>
+      <button class="btn-sm" style="width:100%;margin-top:5px;" onclick="loadMacro()">↻ Refresh macro</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <div class="sec-label" style="margin-bottom:0;">Watchlist</div>
+        <button class="btn-sm" onclick="checkAllWatchlist()">Check all</button>
+      </div>
+      <div id="t2Watchlist">
+        <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">Add stocks from the swing scanner tab.</div>
+      </div>
+    </div>
+
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 11px;">
+      <div class="sec-label">AM Trades Profiles</div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-size:10px;">
+        <div style="display:flex;gap:6px;align-items:flex-start;"><span style="background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd);padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;font-family:'DM Mono',monospace;flex-shrink:0;">18:00</span><span style="color:var(--text1);">Asia HOD/LOD → London expands → NY continues</span></div>
+        <div style="display:flex;gap:6px;align-items:flex-start;"><span style="background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd);padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;font-family:'DM Mono',monospace;flex-shrink:0;">01:00</span><span style="color:var(--text1);">London sweeps Asia + reverses → NY continues</span></div>
+        <div style="display:flex;gap:6px;align-items:flex-start;"><span style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd);padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;font-family:'DM Mono',monospace;flex-shrink:0;">08:00</span><span style="color:var(--text1);">NY sweeps HOD/LOD first then reverses</span></div>
+        <div style="display:flex;gap:6px;align-items:flex-start;"><span style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd);padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;font-family:'DM Mono',monospace;flex-shrink:0;">SKIP</span><span style="color:var(--text1);">Asia+London > 83% ADR — pass the day</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="t2-content">
+    <div class="method-strip">
+      <strong>AM Trades Daily Profile:</strong> Three 7-hour session candles (Asia 18:00 · London 01:00 · NY 08:00) determine today's profile. Execution only happens in the New York session when the profile confirms. NY closes in bias direction 86% of the time.
+    </div>
+    <div id="t2Cards">
+      <div class="empty">
+        <h2>No watchlist yet</h2>
+        <p>Go to the TTrades Swing Scanner tab, run a scan,<br>and click "Add to watchlist" on your best setups.<br><br>
+        They'll appear here with today's AM Trades session profile<br>and a clear action: enter, wait, or skip.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+const KEY = 'gVfk5VqJVjmos83V_0fldfHv1ZYmGZWN';
+
+// ── TICKERS ──────────────────────────────────────────────────
+const SP500 = ['AAPL','MSFT','NVDA','AMZN','META','GOOGL','GOOG','LLY','AVGO','JPM','TSLA','UNH','XOM','V','MA','COST','HD','PG','JNJ','ABBV','MRK','CVX','CRM','WMT','BAC','NFLX','AMD','KO','PEP','TMO','ORCL','ACN','MCD','CSCO','ABT','TXN','DIS','ADBE','GE','CAT','INTU','AMGN','IBM','ISRG','RTX','GS','SPGI','PFE','BLK','BKNG','VRTX','SYK','AXP','UBER','GILD','HON','MS','REGN','ADI','ELV','TJX','MU','BSX','LMT','SO','DE','PANW','ETN','UNP','SCHW','NEE','LRCX','SHW','ANET','ZTS','MCO','ITW','GD','KLAC','FI','NOC','CDNS','SNPS','EMR','WELL','MMM','FCX','EOG','PSA','ORLY','ADSK','HLT','CTAS','BDX','GWW','AMP','FICO','MNST','PWR','FDX','SPG','AME','OTIS','IDXX','DAL','VLO','LULU','NXPI','ON'];
+const NDX_X = ['QCOM','AMAT','MRVL','CRWD','ABNB','MELI','FTNT','PYPL','ROST','ODFL','DDOG','ZS','WDAY','VRSN','KDP'];
+const ALL = [...new Set([...SP500,...NDX_X])];
+const INDICES = [{sym:'SPY',label:'SPY',mult:10},{sym:'QQQ',label:'QQQ',mult:10}];
+const SECTOR = {'AAPL':'Tech','MSFT':'Tech','NVDA':'Tech','AVGO':'Tech','AMD':'Tech','TXN':'Tech','ORCL':'Tech','CRM':'Tech','ADBE':'Tech','CSCO':'Tech','IBM':'Tech','INTU':'Tech','SNPS':'Tech','CDNS':'Tech','ANET':'Tech','PANW':'Tech','KLAC':'Tech','LRCX':'Tech','NXPI':'Tech','ON':'Tech','MU':'Tech','ADI':'Tech','QCOM':'Tech','AMAT':'Tech','MRVL':'Tech','CRWD':'Tech','DDOG':'Tech','ZS':'Tech','WDAY':'Tech','VRSN':'Tech','FTNT':'Tech','META':'Comm','GOOGL':'Comm','GOOG':'Comm','NFLX':'Comm','DIS':'Comm','AMZN':'ConsDisc','TSLA':'ConsDisc','HD':'ConsDisc','MCD':'ConsDisc','BKNG':'ConsDisc','TJX':'ConsDisc','LULU':'ConsDisc','ORLY':'ConsDisc','HLT':'ConsDisc','ABNB':'ConsDisc','MELI':'ConsDisc','ROST':'ConsDisc','WMT':'ConsStap','PG':'ConsStap','KO':'ConsStap','PEP':'ConsStap','COST':'ConsStap','MNST':'ConsStap','KDP':'ConsStap','JPM':'Finance','BAC':'Finance','GS':'Finance','MS':'Finance','AXP':'Finance','BLK':'Finance','SPGI':'Finance','V':'Finance','MA':'Finance','SCHW':'Finance','AMP':'Finance','LLY':'Health','UNH':'Health','JNJ':'Health','ABBV':'Health','MRK':'Health','TMO':'Health','ABT':'Health','ISRG':'Health','VRTX':'Health','REGN':'Health','AMGN':'Health','BSX':'Health','ELV':'Health','GILD':'Health','BDX':'Health','ZTS':'Health','SYK':'Health','IDXX':'Health','GE':'Industrials','CAT':'Industrials','RTX':'Industrials','HON':'Industrials','UNP':'Industrials','LMT':'Industrials','GD':'Industrials','ETN':'Industrials','NOC':'Industrials','DE':'Industrials','EMR':'Industrials','ITW':'Industrials','CTAS':'Industrials','FDX':'Industrials','AME':'Industrials','OTIS':'Industrials','DAL':'Industrials','PWR':'Industrials','GWW':'Industrials','ODFL':'Industrials','XOM':'Energy','CVX':'Energy','EOG':'Energy','VLO':'Energy','NEE':'Utilities','PSA':'RealEst','SPG':'RealEst','WELL':'RealEst','UBER':'ITSvc','FI':'ITSvc','ACN':'ITSvc','FICO':'Tech','ADSK':'Tech','FCX':'Materials','MMM':'Industrials','PYPL':'ITSvc','SO':'Utilities'};
+
+// ── STATE ─────────────────────────────────────────────────────
+let swingResults=[], watchlist=[], isScanning=false, debugLines=[];
+let swingStats={scanned:0,matches:0,gradeA:0,noBias:0,noCISD:0};
+
+// ── UTILS ─────────────────────────────────────────────────────
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const today=()=>new Date().toISOString().split('T')[0];
+const fmt=n=>isNaN(n)?'—':Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+function daysAgo(n){const d=new Date();d.setDate(d.getDate()-n);return d.toISOString().split('T')[0];}
+function getET(){const et=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));return{h:et.getHours(),m:et.getMinutes(),hhmm:et.getHours()*100+et.getMinutes()};}
+function getSession(){const{hhmm}=getET();if(hhmm>=1800||hhmm<100)return{name:'Asia',cls:'sess-asia'};if(hhmm>=100&&hhmm<800)return{name:'London',cls:'sess-london'};if(hhmm>=800&&hhmm<1600)return{name:'New York',cls:'sess-ny'};return{name:'Closed',cls:'sess-closed'};}
+
+function updateClock(){
+  const{h,m}=getET();const h12=h%12||12,ap=h>=12?'PM':'AM';
+  document.getElementById('etClock').textContent=`${h12}:${String(m).padStart(2,'0')} ${ap} ET`;
+  const s=getSession();
+  const b=document.getElementById('sessionBadge');b.textContent=s.name;b.className='session-badge '+s.cls;
+  const{hhmm}=getET();
+  document.getElementById('segA').className='seg-a'+(hhmm>=1800||hhmm<100?' live':'');
+  document.getElementById('segL').className='seg-l'+(hhmm>=100&&hhmm<800?' live':'');
+  document.getElementById('segN').className='seg-n'+(hhmm>=800&&hhmm<1600?' live':'');
+}
+
+function log(msg,type='info',panel='t1'){
+  const c=type==='pass'?'var(--green)':type==='fail'?'var(--red)':type==='warn'?'var(--amber)':'var(--text2)';
+  debugLines.push(`<span style="color:${c}">${msg}</span>`);
+  const el=document.getElementById(panel+'Debug');
+  if(el&&el.style.display!=='none'){el.innerHTML=debugLines.slice(-200).join('<br>');el.scrollTop=el.scrollHeight;}
+}
+
+function toggleDebug(id){
+  const el=document.getElementById(id);
+  const show=el.style.display==='none';
+  el.style.display=show?'block':'none';
+  if(show){el.innerHTML=debugLines.slice(-200).join('<br>');el.scrollTop=el.scrollHeight;}
+}
+
+async function fetchBars(ticker,mult,span,days,limit=500){
+  const url=`https://api.polygon.io/v2/aggs/ticker/${ticker}/range/${mult}/${span}/${daysAgo(days)}/${today()}?adjusted=true&sort=asc&limit=${limit}&apiKey=${KEY}`;
+  const r=await fetch(url);const d=await r.json();
+  return d?.results?.length>=2?d.results:null;
+}
+
+// ── TAB SWITCHING ────────────────────────────────────────────
+function switchTab(n){
+  document.getElementById('tab1').className='tab'+(n===1?' active':'');
+  document.getElementById('tab2').className='tab'+(n===2?' active':'');
+  document.getElementById('panel1').className='panel'+(n===1?' active':'');
+  document.getElementById('panel2').className='panel'+(n===2?' active':'');
+  if(n===2){renderIntraday();if(!document.getElementById('t2IndexCards').children.length||document.getElementById('t2IndexCards').textContent.includes('Click'))loadMacro();}
+}
+
+// ═══════════════════════════════════════════════
+// TTRADES SWING SCANNER LOGIC
+// ═══════════════════════════════════════════════
+
+function getDailyBias(bars){
+  // Always use the last TWO fully closed daily bars
+  // bars[n-1] = today (may be incomplete if market is open)
+  // bars[n-2] = yesterday (fully closed) — this is our "current" close
+  // bars[n-3] = day before (fully closed) — this is our "previous" bar
+  const n=bars.length;if(n<4)return null;
+  const closes=bars.map(b=>b.c),highs=bars.map(b=>b.h),lows=bars.map(b=>b.l);
+  // Use n-2 as current close (yesterday — confirmed closed candle)
+  // Use n-3 as previous bar for comparison
+  const curr=closes[n-2],currH=highs[n-2],currL=lows[n-2];
+  const prevH=highs[n-3],prevL=lows[n-3];
+  if(curr>prevH){
+    let swL=Infinity,swLi=-1;
+    for(let i=Math.max(0,n-14);i<n-2;i++){if(i>0&&lows[i]<lows[i-1]&&(i+1<n&&lows[i]<=lows[i+1])&&lows[i]<swL){swL=lows[i];swLi=i;}}
+    return{bias:'bullish',prevHigh:prevH,prevLow:prevL,current:curr,swingPoint:swL,swingIdx:swLi,reason:`Yesterday closed $${fmt(curr)} above prev high $${fmt(prevH)}`};
+  }
+  if(curr<prevL){
+    let swH=0,swHi=-1;
+    for(let i=Math.max(0,n-14);i<n-2;i++){if(i>0&&highs[i]>highs[i-1]&&(i+1<n&&highs[i]>=highs[i+1])&&highs[i]>swH){swH=highs[i];swHi=i;}}
+    return{bias:'bearish',prevHigh:prevH,prevLow:prevL,current:curr,swingPoint:swH,swingIdx:swHi,reason:`Yesterday closed $${fmt(curr)} below prev low $${fmt(prevL)}`};
+  }
+  return null;
+}
+
+function getCISDandPOI(hourly,bias){
+  if(!hourly||hourly.length<4)return null;
+  const n=hourly.length,closes=hourly.map(b=>b.c),highs=hourly.map(b=>b.h),lows=hourly.map(b=>b.l),opens=hourly.map(b=>b.o);
+  const curr=closes[n-1],prevH=bias.prevHigh,prevL=bias.prevLow,mid=(prevH+prevL)/2;
+
+  // CISD: swing point on 1H then close opposite — extended to 30 bars (~30 hours)
+  let cisdPx=0,cisdFound=false;
+  for(let i=Math.max(1,n-30);i<n-1;i++){
+    if(bias.bias==='bullish'){
+      const isSL=lows[i]<lows[i-1]&&(i+1>=n||lows[i]<=lows[i+1]);
+      if(isSL){for(let j=i+1;j<=Math.min(i+4,n-1);j++){if(closes[j]>highs[i]){cisdFound=true;cisdPx=highs[i];break;}}}
+    } else {
+      const isSH=highs[i]>highs[i-1]&&(i+1>=n||highs[i]>=highs[i+1]);
+      if(isSH){for(let j=i+1;j<=Math.min(i+4,n-1);j++){if(closes[j]<lows[i]){cisdFound=true;cisdPx=lows[i];break;}}}
+    }
+    if(cisdFound)break;
+  }
+  if(!cisdFound)return null;
+
+  // POI in correct half — loosened to 60/40 split and 10% proximity
+  // Bullish: POI should be above the 40th percentile of range (not strictly above mid)
+  // Bearish: POI should be below the 60th percentile of range
+  const bias40 = prevL + (prevH - prevL) * 0.40; // 40th pct — bullish POI above here
+  const bias60 = prevL + (prevH - prevL) * 0.60; // 60th pct — bearish POI below here
+  const pois=[];
+  // FVG — extended lookback to 36 bars, proximity to 10%
+  for(let i=Math.max(1,n-36);i<n-1;i++){
+    if(i+1>=n)break;
+    const fT=lows[i+1],fB=highs[i-1];
+    if(fB<fT){
+      const m=(fT+fB)/2;
+      const inHalf=(bias.bias==='bullish'&&m>bias40)||(bias.bias==='bearish'&&m<bias60);
+      const prox=Math.abs(curr-m)/curr*100;
+      if(inHalf&&prox<10)pois.push({type:'FVG',level:+m.toFixed(2),zoneTop:+fT.toFixed(2),zoneBot:+fB.toFixed(2),proximity:+prox.toFixed(2)});
+    }
+  }
+  // OB — extended to 30 bars, proximity to 10%
+  for(let i=Math.max(1,n-30);i<n-1;i++){
+    const isBull=closes[i]>opens[i],isBear=closes[i]<opens[i];
+    const m=(highs[i]+lows[i])/2;
+    if((bias.bias==='bullish'&&isBear&&m>bias40)||(bias.bias==='bearish'&&isBull&&m<bias60)){
+      const prox=Math.abs(curr-m)/curr*100;
+      if(prox<10)pois.push({type:'Order Block',level:+m.toFixed(2),zoneTop:+highs[i].toFixed(2),zoneBot:+lows[i].toFixed(2),proximity:+prox.toFixed(2)});
+    }
+  }
+  pois.sort((a,b)=>a.proximity-b.proximity);
+  const deduped=[];
+  for(const p of pois){if(!deduped.some(d=>Math.abs(d.level-p.level)/p.level<0.01))deduped.push(p);}
+  const bestPOI=deduped[0]||null;
+  const inZone=bestPOI?curr<=bestPOI.zoneTop*1.008&&curr>=bestPOI.zoneBot*0.992:false;
+  return{cisdPx:+cisdPx.toFixed(2),bestPOI,inZone,mid:+mid.toFixed(2)};
+}
+
+function buildSwingPlan(bias,l3){
+  const poi=l3?.bestPOI;if(!poi)return null;
+  const entry=bias.bias==='bullish'?+poi.zoneTop.toFixed(2):+poi.zoneBot.toFixed(2);
+  const stopBuf=poi.type==='FVG'?0.002:0.003;
+  const stop=bias.bias==='bullish'?+(poi.zoneBot*(1-stopBuf)).toFixed(2):+(poi.zoneTop*(1+stopBuf)).toFixed(2);
+  const target=bias.bias==='bullish'?+bias.prevHigh.toFixed(2):+bias.prevLow.toFixed(2);
+  const risk=Math.abs(entry-stop),reward=Math.abs(target-entry);
+  const rr=risk>0?+(reward/risk).toFixed(2):0;
+  const movePct=+((reward/entry)*100).toFixed(2);
+  const atm=Math.round(entry/5)*5;
+  const expiry=getExpiry(21);
+  const prem=Math.max(80,Math.round(entry*0.02));
+  const gainPct=+((reward*0.52*100)/prem*100).toFixed(0);
+  return{entry,stop,target,risk:+risk.toFixed(2),reward:+reward.toFixed(2),rr,movePct,atm,expiry,prem,gainPct,bias:bias.bias};
+}
+
+function gradeSwing(bias,l3,plan){
+  let s=0;
+  if(plan&&plan.rr>=3)s+=3;else if(plan&&plan.rr>=2)s+=2;else if(plan&&plan.rr>=1.5)s+=1;
+  if(l3?.bestPOI?.type==='FVG'||l3?.bestPOI?.type==='Order Block')s+=3;else if(l3?.bestPOI)s+=2;
+  if(l3?.inZone)s+=2;
+  return s>=7?'A':s>=4?'B':'C';
+}
+
+function getExpiry(d){
+  const dt=new Date();dt.setDate(dt.getDate()+d);
+  const day=dt.getDay();if(day!==5)dt.setDate(dt.getDate()+(5-day+7)%7);
+  return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+
+async function detectSwing(ticker){
+  const[daily,hourly]=await Promise.all([fetchBars(ticker,1,'day',20,50),fetchBars(ticker,1,'hour',5,120)]);
+  if(!daily||daily.length<3){log(`${ticker}: no daily`,'fail');return null;}
+  const bias=getDailyBias(daily);
+  if(!bias){swingStats.noBias++;log(`${ticker}: neutral — inside prev range`,'fail');return null;}
+  log(`${ticker}: ${bias.bias} | ${bias.reason}`,'info');
+  const l3=getCISDandPOI(hourly,bias);
+  if(!l3){swingStats.noCISD++;log(`${ticker}: no CISD or POI`,'fail');return null;}
+  log(`${ticker}: CISD $${l3.cisdPx} | ${l3.bestPOI?.type||'no POI'} | ${l3.inZone?'in zone':'approaching'}`,'pass');
+  const plan=buildSwingPlan(bias,l3);
+  if(!plan||plan.rr<1.5){log(`${ticker}: R:R too low`,'fail');return null;}
+  const grade=gradeSwing(bias,l3,plan);
+  const current=daily[daily.length-1].c;
+  log(`${ticker}: ✓ Grade ${grade} | R:R ${plan.rr} | Entry $${plan.entry}`,'pass');
+  return{ticker,sector:SECTOR[ticker]||'Other',current,bias,l3,plan,grade,inWatchlist:false,commentary:null,tvLink:`https://www.tradingview.com/chart/?symbol=${ticker}`};
+}
+
+async function startSwingScan(diag=false){
+  if(isScanning)return;
+
+  // Timing check
+  const{hhmm}=getET();
+  const isOptimal=(hhmm>=1600)||(hhmm<930);
+  const timingEl=document.getElementById('timingWarning');
+  timingEl.style.display=isOptimal?'none':'block';
+
+  isScanning=true;swingResults=[];debugLines=[];
+  swingStats={scanned:0,matches:0,gradeA:0,noBias:0,noCISD:0};
+  const tickers=diag?ALL.slice(0,25):ALL;
+  document.getElementById('t1ScanBtn').disabled=true;
+  document.getElementById('t1DiagBtn').disabled=true;
+  document.getElementById('t1Progress').style.display='block';
+  if(diag){document.getElementById('t1Debug').style.display='block';}
+  document.getElementById('t1Cards').innerHTML=`<div class="empty"><h2>Scanning ${tickers.length} tickers...</h2><p>Applying TTrades fractal model. Results appear as found.</p></div>`;
+  updateSwingMetrics();
+
+  for(let i=0;i<tickers.length;i++){
+    const ticker=tickers[i];
+    document.getElementById('t1ProgressLbl').textContent=`${ticker} — ${i+1} / ${tickers.length}`;
+    document.getElementById('t1ProgressFill').style.width=((i+1)/tickers.length*100).toFixed(0)+'%';
+    try{
+      swingStats.scanned++;
+      const r=await detectSwing(ticker);
+      if(r){
+        swingStats.matches++;
+        if(r.grade==='A')swingStats.gradeA++;
+        // Mark if already in watchlist
+        r.inWatchlist=watchlist.some(w=>w.ticker===ticker);
+        swingResults.push(r);
+        renderSwingCards();
+        getSwingCommentary(r).then(c=>{const item=swingResults.find(x=>x.ticker===ticker);if(item){item.commentary=c;renderSwingCards();}});
+      }
+      updateSwingMetrics();
+    }catch(e){log(`${ticker}: error — ${e.message}`,'fail');}
+    await sleep(280);
+  }
+  document.getElementById('t1ScanBtn').disabled=false;
+  document.getElementById('t1DiagBtn').disabled=false;
+  document.getElementById('t1Progress').style.display='none';
+  document.getElementById('t1Badge').textContent=swingStats.matches;
+  isScanning=false;
+  if(!swingResults.length)document.getElementById('t1Cards').innerHTML=`<div class="empty"><h2>No setups found</h2><p>Most stocks may be inside their previous day's range today.<br>Best time to run: after 4pm ET when daily candles have closed.</p></div>`;
+}
+
+async function getSwingCommentary(r){
+  const{ticker,sector,bias,l3,plan,grade}=r;
+  try{
+    const prompt=`TTrades fractal model analyst. 2 sentences max, direct, trader-focused.
+${ticker} (${sector}) | Bias: ${bias.bias} | Grade: ${grade}
+Daily: ${bias.reason} | Swing point: $${bias.swingPoint?.toFixed(2)||'—'}
+1H CISD: $${l3.cisdPx} | POI: ${l3.bestPOI?.type||'none'} $${l3.bestPOI?.zoneBot||''}–$${l3.bestPOI?.zoneTop||''} | ${l3.inZone?'Price IN zone':'Approaching zone'}
+Entry $${plan.entry} | Stop $${plan.stop} | Target $${plan.target} | R:R ${plan.rr}
+Options: ${plan.atm}${bias.bias==='bullish'?'C':'P'} ${plan.expiry} ~$${plan.prem}
+Focus: quality of fractal alignment and what 5-min confirmation to look for. No preamble.`;
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    const d=await resp.json();return d.content?.[0]?.text||'—';
+  }catch{return'—';}
+}
+
+function updateSwingMetrics(){
+  document.getElementById('t1Scanned').textContent=swingStats.scanned;
+  document.getElementById('t1Matches').textContent=swingStats.matches;
+  document.getElementById('t1GradeA').textContent=swingStats.gradeA;
+  document.getElementById('t1WL').textContent=watchlist.length;
+  document.getElementById('t1NoBias').textContent=swingStats.noBias;
+  document.getElementById('t1NoCISD').textContent=swingStats.noCISD;
+  document.getElementById('wlCount').textContent=watchlist.length;
+}
+
+function addToWatchlist(ticker){
+  const r=swingResults.find(x=>x.ticker===ticker);
+  if(!r)return;
+  if(watchlist.some(w=>w.ticker===ticker)){
+    watchlist=watchlist.filter(w=>w.ticker!==ticker);
+    r.inWatchlist=false;
+  } else {
+    watchlist.push({ticker,bias:r.bias,plan:r.plan,grade:r.grade,sector:r.sector,current:r.current,profileStatus:null});
+    r.inWatchlist=true;
+  }
+  updateSwingMetrics();
+  renderSwingCards();
+  renderWatchlistSidebar();
+  document.getElementById('t2Badge').textContent=watchlist.length||'—';
+}
+
+function renderSwingCards(){
+  const bf=document.getElementById('t1Bias').value;
+  const gf=document.getElementById('t1Grade').value;
+  const pf=document.getElementById('t1POI').value;
+  let filtered=swingResults.filter(r=>{
+    if(bf!=='all'&&r.bias.bias!==bf)return false;
+    if(gf==='A'&&r.grade!=='A')return false;
+    if(gf==='AB'&&r.grade==='C')return false;
+    if(pf!=='all'&&r.l3?.bestPOI?.type!==pf)return false;
+    return true;
+  }).sort((a,b)=>{const g={A:0,B:1,C:2};return g[a.grade]-g[b.grade]||b.plan.rr-a.plan.rr;});
+
+  if(!filtered.length){document.getElementById('t1Cards').innerHTML='<div class="empty"><h2>No results</h2><p>Try adjusting filters.</p></div>';return;}
+  document.getElementById('t1Cards').innerHTML=`<div class="cards-grid">${filtered.map(r=>buildSwingCard(r)).join('')}</div>`;
+}
+
+function buildSwingCard(r){
+  const{ticker,sector,current,bias,l3,plan,grade,inWatchlist,commentary,tvLink}=r;
+  const gcls=`grade-${grade.toLowerCase()}`;
+  const bChip=bias.bias==='bullish'?'chip-green':'chip-red';
+  const poiChip=l3.bestPOI?.type==='FVG'?'chip-teal':'chip-purple';
+  const zoneChip=l3.inZone?'chip-green':'chip-amber';
+  const rrChip=plan.rr>=3?'chip-green':plan.rr>=2?'chip-amber':'chip-gray';
+
+  const l1cls='pass',l2cls=l3.cisdPx?'pass':'pending',l3cls=l3.bestPOI?'pass':'pending';
+
+  return `<div class="sw-card ${gcls}">
+    <div class="card-top">
+      <div>
+        <div class="card-ticker"><a href="${tvLink}" target="_blank">${ticker} <span style="font-size:11px;color:var(--blue)">↗</span></a></div>
+        <div class="card-sub">$${fmt(current)} · ${sector}</div>
+      </div>
+      <div class="card-badges">
+        <span class="grade-pill ${gcls}">${grade}</span>
+        <span class="chip ${bChip}">${bias.bias.toUpperCase()}</span>
+        <span class="chip ${rrChip}">${plan.rr}:1 R:R</span>
+      </div>
+    </div>
+
+    <button class="add-wl-btn ${inWatchlist?'added':''}" onclick="addToWatchlist('${ticker}')">
+      ${inWatchlist?'✓ In watchlist — click to remove':'+ Add to watchlist → AM Trades tab'}
+    </button>
+
+    <div class="chips">
+      <span class="chip ${poiChip}">${l3.bestPOI?.type||'No POI'}</span>
+      <span class="chip ${zoneChip}">${l3.inZone?'In zone':'Approaching'}</span>
+      <span class="chip chip-gray">Swing pt $${fmt(bias.swingPoint)}</span>
+      <span class="chip chip-blue">CISD $${fmt(l3.cisdPx)}</span>
+    </div>
+
+    <div class="layers">
+      <div class="layer pass">
+        <div class="layer-num">1</div>
+        <div><div class="layer-title">Daily Bias — ${bias.bias.toUpperCase()}</div><div class="layer-detail">${bias.reason}</div></div>
+      </div>
+      <div class="layer ${l2cls}">
+        <div class="layer-num">2</div>
+        <div><div class="layer-title">Hourly CISD at swing point</div><div class="layer-detail">${l3.cisdPx?`CISD confirmed at $${fmt(l3.cisdPx)} | Swing pt $${fmt(bias.swingPoint)}`:'CISD pending'}</div></div>
+      </div>
+      <div class="layer ${l3cls}">
+        <div class="layer-num">3</div>
+        <div><div class="layer-title">POI in correct half of range</div><div class="layer-detail">${l3.bestPOI?`${l3.bestPOI.type} $${fmt(l3.bestPOI.zoneBot)}–$${fmt(l3.bestPOI.zoneTop)} | ${l3.inZone?'Price inside zone ✓':'Approaching ('+l3.bestPOI.proximity.toFixed(1)+'% away)'}`:'No POI found within 10% proximity'}</div></div>
+      </div>
+    </div>
+
+    <div class="trade-plan">
+      <div class="trade-plan-lbl">Trade Plan</div>
+      <div class="trade-cells">
+        <div class="tcell entry"><div class="tcell-lbl">Entry</div><div class="tcell-val">$${fmt(plan.entry)}</div><div class="tcell-sub">Zone top</div></div>
+        <div class="tcell stop"><div class="tcell-lbl">Stop</div><div class="tcell-val">$${fmt(plan.stop)}</div><div class="tcell-sub">-$${fmt(plan.risk)}</div></div>
+        <div class="tcell target"><div class="tcell-lbl">Target</div><div class="tcell-val">$${fmt(plan.target)}</div><div class="tcell-sub">Prev ${bias.bias==='bullish'?'high':'low'}</div></div>
+        <div class="tcell rr"><div class="tcell-lbl">Move</div><div class="tcell-val">${plan.movePct}%</div><div class="tcell-sub">${plan.rr}:1 R</div></div>
+      </div>
+      <div class="options-row">
+        <div class="opt-item"><div class="opt-lbl">Contract</div><div class="opt-val">${plan.atm}${bias.bias==='bullish'?'C':'P'} ${plan.expiry}</div></div>
+        <div class="opt-sep"></div>
+        <div class="opt-item"><div class="opt-lbl">Est. prem</div><div class="opt-val">~$${plan.prem}</div></div>
+        <div class="opt-sep"></div>
+        <div class="opt-item"><div class="opt-lbl">Est. gain</div><div class="opt-val">${plan.gainPct}%</div></div>
+        <div class="opt-sep"></div>
+        <div class="opt-item"><div class="opt-lbl">Stop rule</div><div class="opt-val">-40% prem</div></div>
+      </div>
+    </div>
+
+    <div class="card-commentary ${commentary?'loaded':''}">${commentary||'Generating analysis...'}</div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════
+// AM TRADES INTRADAY LOGIC
+// ═══════════════════════════════════════════════
+
+function getSessionProfile(session7h,dailyBars){
+  if(!session7h||session7h.length<2)return{profile:'unknown',status:'developing',reason:'Insufficient session data'};
+  const n=session7h.length;
+  const asia=session7h[n-3]||null;
+  const london=session7h[n-2]||null;
+  const ny=session7h[n-1]||null;
+  let adr=50;
+  if(dailyBars&&dailyBars.length>=10){const l20=dailyBars.slice(-21,-1);adr=l20.reduce((s,b)=>s+(b.h-b.l),0)/l20.length;}
+
+  const aH=asia?.h||0,aL=asia?.l||Infinity;
+  const lH=london?.h||0,lL=london?.l||Infinity;
+  const oH=Math.max(aH,lH),oL=Math.min(aL,lL);
+  const oRange=oH-oL,oPct=adr>0?oRange/adr:0;
+
+  if(oPct>0.83&&london){return{profile:'SKIP',status:'invalid',reason:`Asia+London consumed ${(oPct*100).toFixed(0)}% of ADR — full daily range taken. Pass the day.`,oPct,adr,oRange};}
+
+  // 18:00 reversal: Asia set HOD/LOD, London expanded away
+  const asiaSetLOD=london&&lH>aH&&lL>aL*0.999;
+  const asiaSetHOD=london&&lL<aL&&lH<aH*1.001;
+  if(asiaSetHOD||asiaSetLOD){
+    const sess=getSession();
+    const status=sess.name==='New York'?'confirmed':'developing';
+    return{profile:'18:00',status,reason:`Asia set ${asiaSetHOD?'HOD':'LOD'} → London expanded ${asiaSetLOD?'higher':'lower'}. NY continuation underway — no retracement needed.`,aH,aL,lH,lL,adr,oPct};}
+
+  // 01:00 reversal: London swept Asia then reversed
+  if(london){
+    const lSwept=(lL<aL&&london.c>aL)||(lH>aH&&london.c<aH);
+    if(lSwept){const sess=getSession();const status=sess.name==='New York'?'confirmed':'developing';return{profile:'01:00',status,reason:`London swept Asia range then reversed. London ${lL<aL?'LOD':'HOD'} is set — NY continuation expected.`,aH,aL,lH,lL,adr,oPct};}}
+
+  // 08:00 reversal
+  const nyH=ny?.h||0,nyL=ny?.l||Infinity;
+  const nySweptH=ny&&nyH>oH,nySweptL=ny&&nyL<oL;
+  const nyReversed=ny&&((nySweptH&&ny.c<oH)||(nySweptL&&ny.c>oL));
+  if(nyReversed)return{profile:'08:00',status:'confirmed',reason:`NY swept ${nySweptH?'above overnight high':'below overnight low'} then reversed. Entry window open now.`,aH,aL,lH,lL,adr,oPct};
+  if(getSession().name==='New York'&&(nySweptH||nySweptL))return{profile:'08:00',status:'wait',reason:`NY swept ${nySweptH?'above overnight high':'below overnight low'}. Waiting for reversal confirmation before entry.`,aH,aL,lH,lL,adr,oPct};
+  return{profile:'08:00',status:'developing',reason:`Neither Asia nor London reversed. Expect NY to run the overnight ${oH > oL?'high/low':'high/low'} first then reverse. Wait for it.`,aH,aL,lH,lL,adr,oPct};
+}
+
+async function loadMacro(){
+  document.getElementById('t2IndexCards').innerHTML='<div style="text-align:center;padding:1rem;color:var(--text3);font-size:11px;">Loading...</div>';
+  const html=[];
+  for(const idx of INDICES){
+    try{
+      const[daily,session]=await Promise.all([fetchBars(idx.sym,1,'day',20,40),fetchBars(idx.sym,7,'hour',10,20)]);
+      if(!daily||daily.length<3){html.push(`<div class="idx-card"><div class="idx-name">${idx.label}</div><div style="font-size:11px;color:var(--text3);">No data</div></div>`);continue;}
+      const bias=getDailyBias(daily);
+      const profile=getSessionProfile(session,daily);
+      const curr=daily[daily.length-1].c*(idx.mult||1);
+      const prev=daily[daily.length-2].c*(idx.mult||1);
+      const chg=(curr-prev)/prev*100;
+      const cardCls=profile.status==='invalid'?'skip':bias?.bias==='bullish'?'bull':bias?.bias==='bearish'?'bear':'';
+      const statusCls=profile.status==='confirmed'?'status-confirmed':profile.status==='wait'?'status-wait':profile.status==='invalid'?'status-skip':'status-developing';
+      const statusLbl=profile.status==='confirmed'?'✓ Confirmed':profile.status==='wait'?'⏳ Wait for sweep':profile.status==='invalid'?'✗ SKIP DAY':'⚡ Developing';
+      html.push(`<div class="idx-card ${cardCls}">
+        <div class="idx-header">
+          <div><div class="idx-name">${idx.label}</div><div class="idx-price">$${fmt(curr)} <span style="color:${chg>=0?'var(--green)':'var(--red)'}">${chg>=0?'+':''}${chg.toFixed(2)}%</span></div></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
+            <span class="chip ${bias?.bias==='bullish'?'chip-green':'chip-red'}">${bias?.bias?.toUpperCase()||'NEUTRAL'}</span>
+            <span class="chip chip-gray">${profile.profile} Profile</span>
+          </div>
+        </div>
+        <div class="profile-box">
+          <div class="profile-name">${profile.profile==='18:00'?'18:00 Reversal':profile.profile==='01:00'?'01:00 Reversal':profile.profile==='08:00'?'08:00 — Wait for NY sweep':profile.profile==='SKIP'?'⚠ Day Invalidated':profile.profile}</div>
+          <div class="profile-desc">${profile.reason}</div>
+          <div><span class="status-pill ${statusCls}">${statusLbl}</span></div>
+        </div>
+        <div style="font-size:10px;color:var(--text2);font-family:'DM Mono',monospace;">O/N range: ${(profile.oPct*100||0).toFixed(0)}% of ADR</div>
+      </div>`);
+    }catch(e){html.push(`<div class="idx-card"><div class="idx-name">${idx.label}</div><div style="color:var(--red);font-size:11px;">Error</div></div>`);}
+    await sleep(270);
+  }
+  document.getElementById('t2IndexCards').innerHTML=html.join('');
+}
+
+async function checkWatchlistTicker(item){
+  try{
+    const[daily,session,hourly]=await Promise.all([fetchBars(item.ticker,1,'day',20,40),fetchBars(item.ticker,7,'hour',10,20),fetchBars(item.ticker,1,'hour',3,80)]);
+    if(!daily||!session)return;
+    const profile=getSessionProfile(session,daily);
+    const curr=daily[daily.length-1].c;
+
+    // Determine entry status
+    let status='developing';
+    if(profile.status==='invalid')status='skip';
+    else if(profile.status==='confirmed')status='confirmed';
+    else if(profile.status==='wait')status='waiting';
+
+    item.profileStatus=profile;
+    item.status=status;
+    item.current=curr;
+  }catch{}
+}
+
+async function checkAllWatchlist(){
+  if(!watchlist.length)return;
+  document.getElementById('t2Cards').innerHTML='<div class="empty"><h2>Checking profiles...</h2></div>';
+  for(const item of watchlist){await checkWatchlistTicker(item);await sleep(280);}
+  renderIntraday();
+  renderWatchlistSidebar();
+}
+
+function renderWatchlistSidebar(){
+  const el=document.getElementById('t2Watchlist');
+  if(!watchlist.length){el.innerHTML='<div style="font-size:11px;color:var(--text3);font-family:\'DM Mono\',monospace;">Add stocks from the swing scanner tab.</div>';return;}
+  el.innerHTML=watchlist.map(w=>{
+    const bCls=w.bias?.bias==='bullish'?'chip-green':'chip-red';
+    const statusColor=w.status==='confirmed'?'var(--green)':w.status==='waiting'?'var(--blue)':w.status==='skip'?'var(--red)':'var(--amber)';
+    const statusLabel=w.status==='confirmed'?'✓ Enter':w.status==='waiting'?'⏳ Wait':w.status==='skip'?'✗ Skip':'⚡ Dev';
+    return `<div class="wl-item" onclick="scrollToCard('${w.ticker}')">
+      <div>
+        <div class="wl-ticker">${w.ticker}</div>
+        <div style="font-size:10px;color:var(--text3);">${w.sector} · ${w.bias?.bias||'—'}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;">
+        <span style="font-size:10px;font-weight:600;color:${statusColor};font-family:'DM Mono',monospace;">${statusLabel}</span>
+        <span class="wl-remove" onclick="event.stopPropagation();removeFromWL('${w.ticker}')">✕</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function removeFromWL(ticker){
+  watchlist=watchlist.filter(w=>w.ticker!==ticker);
+  const r=swingResults.find(x=>x.ticker===ticker);if(r)r.inWatchlist=false;
+  updateSwingMetrics();renderSwingCards();renderWatchlistSidebar();renderIntraday();
+  document.getElementById('t2Badge').textContent=watchlist.length||'—';
+  document.getElementById('wlCount').textContent=watchlist.length;
+}
+
+function scrollToCard(ticker){document.getElementById('card-'+ticker)?.scrollIntoView({behavior:'smooth',block:'center'});}
+
+function renderIntraday(){
+  if(!watchlist.length){
+    document.getElementById('t2Cards').innerHTML='<div class="empty"><h2>No watchlist yet</h2><p>Go to the TTrades Swing Scanner tab, run a scan,<br>and click "+ Add to watchlist" on your best setups.</p></div>';
+    return;
+  }
+  const cards=watchlist.map(item=>buildIntradayCard(item)).join('');
+  document.getElementById('t2Cards').innerHTML=`<div style="display:flex;flex-direction:column;gap:10px;">${cards}</div>`;
+}
+
+function buildIntradayCard(item){
+  const{ticker,bias,plan,grade,sector,current,profileStatus,status}=item;
+  if(!profileStatus)return `<div class="intra-card developing" id="card-${ticker}">
+    <div class="intra-top"><div><div class="card-ticker"><a href="https://www.tradingview.com/chart/?symbol=${ticker}" target="_blank">${ticker} ↗</a></div><div class="card-sub">$${fmt(current)} · ${sector}</div></div>
+    <div class="card-badges"><span class="grade-pill grade-${grade.toLowerCase()}">${grade}</span><span class="chip ${bias?.bias==='bullish'?'chip-green':'chip-red'}">${bias?.bias?.toUpperCase()||'—'}</span></div></div>
+    <div class="action-box action-developing"><div class="action-lbl">⚡ Profile not yet checked</div><div class="action-text">Click "Check all" in the sidebar to load today's AM Trades session profile for this stock.</div></div>
+  </div>`;
+
+  const p=profileStatus;
+  const cardCls=status==='confirmed'?'confirmed':status==='waiting'?'waiting':status==='skip'?'skip':'developing';
+  const actionCls=`action-${status||'developing'}`;
+
+  const actionMsg=
+    status==='confirmed'?`🟢 ENTER — ${p.profile==='18:00'?'18:00 profile confirmed. NY is in continuation. Look for 1H or 5-min CISD at your POI ($${fmt(plan?.entry)}) and enter.':p.profile==='01:00'?'01:00 profile confirmed. London set the HOD/LOD — NY is expanding from it. POI entry at $'+fmt(plan?.entry)+' is valid now.':'08:00 profile reversed. NY swept the overnight level and confirmed reversal. Entry at $'+fmt(plan?.entry)+' is open.'}`:
+    status==='waiting'?`🔵 WAIT — 08:00 profile. NY has swept the overnight level but reversal not confirmed yet. Wait for price to close back inside the overnight range before entering.`:
+    status==='skip'?`🔴 SKIP TODAY — Asia and London already consumed ${(p.oPct*100||0).toFixed(0)}% of ADR. There is no range left for NY to expand through. Pass this day regardless of bias.`:
+    `🟡 DEVELOPING — ${p.profile} profile still forming. ${p.reason}`;
+
+  // Session candle mini visual
+  const sess=getSession();
+  const asiaH=p.aH||0,asiaL=p.aL||0,londonH=p.lH||0,londonL=p.lL||0;
+  const maxH=Math.max(asiaH,londonH)||1;
+  const minL=Math.min(asiaL,londonL)||0;
+  const range=maxH-minL||1;
+  const normH=v=>Math.max(4,Math.round((v-minL)/range*48));
+  const asiaCls=asiaH>asiaL?'candle-bull':'candle-doji';
+  const londonCls=londonH>londonL&&londonL<asiaL?'candle-bear':londonH>asiaH?'candle-bull':'candle-doji';
+
+  return `<div class="intra-card ${cardCls}" id="card-${ticker}">
+    <div class="intra-top">
+      <div>
+        <div class="card-ticker"><a href="https://www.tradingview.com/chart/?symbol=${ticker}" target="_blank">${ticker} ↗</a></div>
+        <div class="card-sub">$${fmt(current)} · ${sector}</div>
+      </div>
+      <div class="card-badges">
+        <span class="grade-pill grade-${grade.toLowerCase()}">${grade}</span>
+        <span class="chip ${bias?.bias==='bullish'?'chip-green':'chip-red'}">${bias?.bias?.toUpperCase()||'—'}</span>
+        <span class="chip chip-gray">${p.profile} Profile</span>
+      </div>
+    </div>
+
+    <div class="action-box ${actionCls}">
+      <div class="action-lbl">${status?.toUpperCase()||'CHECKING'}</div>
+      <div class="action-text">${actionMsg}</div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:9px;">
+      <div style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;">
+        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-family:'DM Mono',monospace;margin-bottom:4px;">Session candles</div>
+        <div class="candle-display">
+          <div class="candle-wrap">
+            <div class="candle-lbl-t">Asia</div>
+            <div class="candle-body ${asiaCls}" style="height:${normH(asiaH)}px;"></div>
+            <div class="candle-stat">${asiaH?'$'+fmt(asiaH):''}</div>
+          </div>
+          <div class="candle-wrap">
+            <div class="candle-lbl-t">London</div>
+            <div class="candle-body ${londonH?londonCls:'candle-pending'}" style="height:${londonH?normH(londonH):20}px;"></div>
+            <div class="candle-stat">${londonH?'$'+fmt(londonH):'pending'}</div>
+          </div>
+          <div class="candle-wrap">
+            <div class="candle-lbl-t">NY</div>
+            <div class="candle-body candle-pending" style="height:20px;"></div>
+            <div class="candle-stat">${sess.name==='New York'?'live':'open'}</div>
+          </div>
+        </div>
+        <div style="font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:3px;">O/N range: ${(p.oPct*100||0).toFixed(0)}% of ADR | ADR: $${(p.adr||0).toFixed(1)}</div>
+      </div>
+      <div style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;">
+        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-family:'DM Mono',monospace;margin-bottom:6px;">Trade levels</div>
+        ${plan?`<div style="font-size:11px;color:var(--text1);line-height:2;font-family:'DM Mono',monospace;">
+          <span style="color:var(--blue);">Entry</span> $${fmt(plan.entry)}<br>
+          <span style="color:var(--red);">Stop</span>  $${fmt(plan.stop)}<br>
+          <span style="color:var(--green);">Target</span> $${fmt(plan.target)}<br>
+          <span style="color:var(--purple);">R:R</span> ${plan.rr}:1
+        </div>`:'<div style="font-size:11px;color:var(--text3);">No plan</div>'}
+      </div>
+    </div>
+
+    <div style="font-size:10px;color:var(--text2);font-family:'DM Mono',monospace;line-height:1.6;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:7px 9px;">${p.reason}</div>
+  </div>`;
+}
+
+// ── REFRESH ALL ───────────────────────────────────────────────
+async function refreshAll(){updateClock();await loadMacro();if(watchlist.length)await checkAllWatchlist();}
+
+// ── INIT ──────────────────────────────────────────────────────
+updateClock();
+setInterval(updateClock,60000);
+renderWatchlistSidebar();
+</script>
+</body>
+</html>
